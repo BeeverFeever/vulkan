@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <vulk/buffer.h>
 #include <vulk/commands.h>
 #include <vulk/descriptors.h>
 #include <vulkan/vulkan.h>
@@ -69,9 +70,7 @@ typedef struct {
    VkBuffer indexBuffer;
    VkDeviceMemory indexBufferMemory;
 
-   vectorT(VkBuffer) uniformBuffers;
-   vectorT(VkDeviceMemory) uniformBuffersMemory;
-   vectorT(void*) uniformBuffersMapped;
+   UniformBufferContainer uniforms;
 
    VkDescriptorPool descriptorPool;
    vectorT(VkDescriptorSet) descriptorSets;
@@ -155,7 +154,7 @@ void record_command_buffer(App* app, VkCommandBuffer commandBuffer, u32 imageInd
    renderPassInfo.renderArea.offset = (VkOffset2D){0, 0};
    renderPassInfo.renderArea.extent = app->swapchain.extent;
 
-   VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+   VkClearValue clearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
    renderPassInfo.clearValueCount = 1;
    renderPassInfo.pClearValues = &clearColor;
 
@@ -236,7 +235,7 @@ void update_uniform_buffer(App* app) {
    // flip upside down
    ubo.proj[1][1] *= -1;
 
-   memcpy(app->uniformBuffersMapped[app->currentFrame], &ubo, sizeof(ubo));
+   memcpy(app->uniforms.mapped[app->currentFrame], &ubo, sizeof(ubo));
 }
 
 void draw_frame(App* app) {
@@ -307,139 +306,6 @@ void draw_frame(App* app) {
    app->currentFrame = (app->currentFrame + 1) % g_maxFramesInFlight;
 }
 
-u32 find_memory_type(App* app, u32 typeFilter, VkMemoryPropertyFlags properties) {
-   VkPhysicalDeviceMemoryProperties memProperties;
-   vkGetPhysicalDeviceMemoryProperties(app->devices.physical, &memProperties);
-
-
-   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-      if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-         return i;
-      }
-   }
-
-   fprintf(stderr, "failed to find suitable memory type!");
-   exit(EXIT_FAILURE);
-}
-
-void create_buffer(App* app, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory) {
-   VkBufferCreateInfo bufferInfo = {};
-   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-   bufferInfo.size = size;
-   bufferInfo.usage = usage;
-   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-   if (vkCreateBuffer(app->devices.logical, &bufferInfo, nullptr, buffer) != VK_SUCCESS) {
-      fprintf(stderr, "failed to create buffer\n");
-      exit(EXIT_FAILURE);
-   }
-
-   VkMemoryRequirements memRequirements;
-   vkGetBufferMemoryRequirements(app->devices.logical, *buffer, &memRequirements);
-
-   VkMemoryAllocateInfo allocInfo = {};
-   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-   allocInfo.allocationSize = memRequirements.size;
-   allocInfo.memoryTypeIndex = find_memory_type(app, memRequirements.memoryTypeBits, properties);
-
-   if (vkAllocateMemory(app->devices.logical, &allocInfo, nullptr, bufferMemory) != VK_SUCCESS) {
-      fprintf(stderr, "failed to allocate vertex buffer memory\n");
-      exit(EXIT_FAILURE);
-   }
-
-   vkBindBufferMemory(app->devices.logical, *buffer, *bufferMemory, 0);
-}
-
-void copy_buffer(App* app, VkBuffer src, VkBuffer dest, VkDeviceSize size) {
-   VkCommandBufferAllocateInfo allocInfo = {};
-   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-   allocInfo.commandPool = app->commandPool;
-   allocInfo.commandBufferCount = 1;
-
-   VkCommandBuffer commandBuffer;
-   vkAllocateCommandBuffers(app->devices.logical, &allocInfo, &commandBuffer);
-
-   VkCommandBufferBeginInfo beginInfo = {};
-   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-   vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-   VkBufferCopy copyRegion = {};
-   copyRegion.srcOffset = 0; // Optional
-   copyRegion.dstOffset = 0; // Optional
-   copyRegion.size = size;
-   vkCmdCopyBuffer(commandBuffer, src, dest, 1, &copyRegion);
-   vkEndCommandBuffer(commandBuffer);
-
-   VkSubmitInfo submitInfo = {};
-   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-   submitInfo.commandBufferCount = 1;
-   submitInfo.pCommandBuffers = &commandBuffer;
-
-   vkQueueSubmit(app->queues.graphics, 1, &submitInfo, VK_NULL_HANDLE);
-   vkQueueWaitIdle(app->queues.graphics);
-
-   vkFreeCommandBuffers(app->devices.logical, app->commandPool, 1, &commandBuffer);
-}
-
-void create_vertex_buffer(App* app) {
-   VkBuffer staginBuffer;
-   VkDeviceMemory stagingBufferMemory;
-
-   create_buffer(app, sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staginBuffer, &stagingBufferMemory);
-
-   void* data;
-   vkMapMemory(app->devices.logical, stagingBufferMemory, 0, sizeof(vertices), 0, &data);
-   memcpy(data, vertices, sizeof(vertices));
-   vkUnmapMemory(app->devices.logical, stagingBufferMemory);
-
-   create_buffer(app, sizeof(vertices), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, &app->vertexBuffer, &app->vertexBufferMemory);
-   copy_buffer(app, staginBuffer, app->vertexBuffer, sizeof(vertices));
-
-   vkDestroyBuffer(app->devices.logical, staginBuffer, nullptr);
-   vkFreeMemory(app->devices.logical, stagingBufferMemory, nullptr);
-}
-
-void create_index_buffer(App* app) {
-   VkDeviceSize bufferSize = sizeof(indices);
-
-   VkBuffer stagingBuffer;
-   VkDeviceMemory stagingBufferMemory;
-   create_buffer(app, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
-
-   void* data;
-   vkMapMemory(app->devices.logical, stagingBufferMemory, 0, bufferSize, 0, &data);
-   memcpy(data, indices, (size_t) bufferSize);
-   vkUnmapMemory(app->devices.logical, stagingBufferMemory);
-
-   create_buffer(app, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &app->indexBuffer, &app->indexBufferMemory);
-
-   copy_buffer(app, stagingBuffer, app->indexBuffer, bufferSize);
-
-   vkDestroyBuffer(app->devices.logical, stagingBuffer, nullptr);
-   vkFreeMemory(app->devices.logical, stagingBufferMemory, nullptr);
-}
-
-void create_uniform_buffer(App* app) {
-   VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-
-    app->uniformBuffers = vector(VkBuffer, g_maxFramesInFlight, &global_allocator);
-    app->uniformBuffersMemory = vector(VkDeviceMemory, g_maxFramesInFlight, &global_allocator);
-    app->uniformBuffersMapped = vector(void*, g_maxFramesInFlight, &global_allocator);
-
-    for (Size i = 0; i < g_maxFramesInFlight; i++) {
-        create_buffer(app, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &app->uniformBuffers[i], &app->uniformBuffersMemory[i]);
-
-        vkMapMemory(app->devices.logical, app->uniformBuffersMemory[i], 0, bufferSize, 0, &app->uniformBuffersMapped[i]);
-
-        vector_update_length(i, app->uniformBuffersMemory);
-        vector_update_length(i, app->uniformBuffersMapped);
-        vector_update_length(i, app->uniformBuffers);
-    }
-}
-
 void init_vulkan(App* app) {
    app->instance = instance_create(&global_allocator);
    debug_utils_messenger_ext_setup(&app->instance, &app->debugMessenger);
@@ -457,12 +323,12 @@ void init_vulkan(App* app) {
 
    app->commandPool = command_pool_create(app->devices, app->window);
 
-   create_vertex_buffer(app);
-   create_index_buffer(app);
-   create_uniform_buffer(app);
+   app->vertexBuffer = buffer_create_vertex(app->devices, app->queues, app->commandPool, sizeof(vertices), vertices, &app->vertexBufferMemory);
+   app->indexBuffer = buffer_create_index(app->devices, app->queues, app->commandPool, sizeof(indices), indices, &app->indexBufferMemory);
+   app->uniforms = buffer_create_uniform(app->devices, app->queues, app->commandPool, sizeof(UniformBufferObject), &global_allocator);
 
    app->descriptorPool = descriptor_pool_create(app->devices);
-   app->descriptorSets = descriptor_set_create(app->uniformBuffers, app->descriptorPool, app->devices, app->pipeline, &global_allocator);
+   app->descriptorSets = descriptor_set_create(app->uniforms.buffers, app->descriptorPool, app->devices, app->pipeline, &global_allocator);
    app->commandBuffers = command_buffers_create(app->devices, app->commandPool, &global_allocator);
    create_sync_objects(app);
 }
@@ -481,8 +347,8 @@ void cleanup(App* app) {
    swapchain_cleanup(&app->swapchain, app->devices);
 
    for (Size i = 0; i < g_maxFramesInFlight; i++) {
-      vkDestroyBuffer(app->devices.logical, app->uniformBuffers[i], nullptr);
-      vkFreeMemory(app->devices.logical, app->uniformBuffersMemory[i], nullptr);
+      vkDestroyBuffer(app->devices.logical, app->uniforms.buffers[i], nullptr);
+      vkFreeMemory(app->devices.logical, app->uniforms.memory[i], nullptr);
    }
 
    vkDestroyDescriptorPool(app->devices.logical, app->descriptorPool, nullptr);
