@@ -8,7 +8,7 @@
 #include <vulk/device.h>
 #include <vulk/window.h>
 
-#include "vector.h"
+#include <utils.h>
 
 typedef struct {
    VkSwapchainKHR handle;

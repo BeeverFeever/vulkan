@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vulk/device.h>
-#include <vector.h>
+#include <utils.h>
 
 typedef struct {
    vectorT(VkBuffer) buffers;

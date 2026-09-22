@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vector.h>
 #include <vulk/device.h>
 #include <vulk/pipeline.h>
+
+#include <utils.h>
 
 extern VkDescriptorBufferInfo ubo_get_descriptor_info(VkBuffer buffer);
 

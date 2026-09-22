@@ -1,13 +1,14 @@
 #include "vulk/pipeline.h"
-#include "vulk/device.h"
-#include "vulkan/vulkan_core.h"
 
 #include <stdlib.h>
+
 #include <vulkan/vulkan.h>
 
+#include <vulk/device.h>
 #include <vulk/shaderModule.h>
 #include <vulk/config.h>
-#include <vector.h>
+
+#include <utils.h>
 
 static VkRenderPass _create_render_pass(Swapchain swapchain, Device device) {
    VkAttachmentDescription colourAttachment = {};

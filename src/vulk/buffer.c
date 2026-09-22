@@ -1,17 +1,15 @@
-#include "buffer.h"
-
-#include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <vulkan/vulkan.h>
 
+#include <vulk/buffer.h>
 #include <vulk/device.h>
 #include <vulk/queues.h>
 #include <vulk/config.h>
 
-#include <vector.h>
+#include <utils.h>
 
 static u32 find_memory_type(Device device, u32 typeFilter, VkMemoryPropertyFlags properties) {
    VkPhysicalDeviceMemoryProperties memProperties;

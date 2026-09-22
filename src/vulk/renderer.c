@@ -9,9 +9,7 @@
 #include <vulk/callbacks.h>
 #include <vulk/debugutils.h>
 
-#include "vector.h"
-#include "memory.h"
-#include "vulkan/vulkan_core.h"
+#include <utils.h>
 
 static void get_required_extensions(vectorT(const char*) extensions) {
    u32 glfwExtensionCount = 0;

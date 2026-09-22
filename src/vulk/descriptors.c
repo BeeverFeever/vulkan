@@ -11,7 +11,7 @@
 #include <vulk/device.h>
 #include <vulk/config.h>
 
-#include <vector.h>
+#include <utils.h>
 
 VkDescriptorPool descriptor_pool_create(Device device) {
    VkDescriptorPool pool = {};

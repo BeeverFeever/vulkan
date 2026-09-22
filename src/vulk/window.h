@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include <vulk/device.h>
-#include <str.h>
+#include <utils.h>
 
 typedef struct {
    GLFWwindow* handle;

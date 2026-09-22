@@ -1,5 +1,3 @@
-#include "memory.h"
-#include "vulkan/vulkan_core.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -9,7 +7,7 @@
 #include <vulk/config.h>
 #include <vulk/queues.h>
 
-#include <vector.h>
+#include <utils.h>
 
 VkCommandPool command_pool_create(Device device, Window window) {
    VkCommandPool pool = {};

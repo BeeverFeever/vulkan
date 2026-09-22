@@ -6,19 +6,18 @@
 #include <string.h>
 #include <time.h>
 
-#include <vulk/buffer.h>
-#include <vulk/commands.h>
-#include <vulk/descriptors.h>
 #include <vulkan/vulkan.h>
 #include <cglm/cglm.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#define VECTOR_IMPLEMENTATION
-#include "vector.h"
-#include "memory.h"
+#define UTILS_IMPL
+#include "utils.h"
 
+#include <vulk/buffer.h>
+#include <vulk/commands.h>
+#include <vulk/descriptors.h>
 #include <vulk/callbacks.h>
 #include <vulk/config.h>
 #include <vulk/device.h>
@@ -76,14 +75,14 @@ typedef struct {
    vectorT(VkDescriptorSet) descriptorSets;
 } App;
 
-constexpr Vertex vertices[] = {
+Vertex vertices[] = {
    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
 };
 
-constexpr u16 indices[] = {
+u16 indices[] = {
    0, 1, 2, 2, 3, 0,
 };
 
@@ -98,6 +97,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
       glfwSetWindowShouldClose(window, GLFW_TRUE);
    }
+}
+
+UtilErrorAction utils_error_callback(UtilErrorCode error, String errorStr, void *value) {
+   return UtilErrorContinue;
 }
 
 VkVertexInputBindingDescription get_vertex_binding_description() {
