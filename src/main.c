@@ -1,11 +1,13 @@
 #include <assert.h>
 #include <cglm/cam.h>
+#include <defines.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include <vulk/queues.h>
 #include <vulkan/vulkan.h>
 #include <cglm/cglm.h>
 
@@ -15,6 +17,10 @@
 #define UTILS_IMPL
 #include "utils.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include <vulk/image.h>
 #include <vulk/buffer.h>
 #include <vulk/commands.h>
 #include <vulk/descriptors.h>
@@ -30,13 +36,8 @@
 typedef struct {
    vec2 pos;
    vec3 colour;
+   vec2 texCoord;
 } Vertex;
-
-typedef struct {
-   mat4 model;
-   mat4 view;
-   mat4 proj;
-} UniformBufferObject;
 
 typedef struct {
    time_t startTime;
@@ -69,6 +70,12 @@ typedef struct {
    VkBuffer indexBuffer;
    VkDeviceMemory indexBufferMemory;
 
+   VkImage textureImage;
+   VkDeviceMemory textureImageMemory;
+
+   VkImageView imageView;
+   VkSampler imageSampler;
+
    UniformBufferContainer uniforms;
 
    VkDescriptorPool descriptorPool;
@@ -76,10 +83,10 @@ typedef struct {
 } App;
 
 Vertex vertices[] = {
-   {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-   {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-   {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+   {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+   {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+   {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
 };
 
 u16 indices[] = {
@@ -87,6 +94,7 @@ u16 indices[] = {
 };
 
 Allocator global_allocator = {};
+vec3 camPos = {};
 
 void framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
    App* app = (App*)glfwGetWindowUserPointer(window);
@@ -94,8 +102,19 @@ void framebuffer_resize_callback(GLFWwindow* window, int width, int height) {
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-      glfwSetWindowShouldClose(window, GLFW_TRUE);
+   if (action == GLFW_PRESS) {
+      if (key == GLFW_KEY_ESCAPE)
+         glfwSetWindowShouldClose(window, GLFW_TRUE);
+   }
+   if (action == GLFW_REPEAT) {
+      if (key == GLFW_KEY_W)
+         camPos[2] += 0.2f;
+      if (key == GLFW_KEY_S)
+         camPos[2] -= 0.2f;
+      if (key == GLFW_KEY_D)
+         camPos[0] -= 0.2f;
+      if (key == GLFW_KEY_A)
+         camPos[0] += 0.2f;
    }
 }
 
@@ -127,18 +146,19 @@ vectorT(VkVertexInputAttributeDescription) get_vertex_attribute_descriptions(All
       .offset = offsetof(Vertex, colour),
    };
 
+   VkVertexInputAttributeDescription attrs3 = (VkVertexInputAttributeDescription){
+      .binding = 0,
+      .location = 2,
+      .format = VK_FORMAT_R32G32_SFLOAT,
+      .offset = offsetof(Vertex, texCoord),
+   };
+
+   // TODO: this doesn't need to be a vector
    vector_push_back(attributeDescriptions, attrs1);
    vector_push_back(attributeDescriptions, attrs2);
+   vector_push_back(attributeDescriptions, attrs3);
 
    return attributeDescriptions;
-}
-
-VkDescriptorBufferInfo ubo_get_descriptor_info(VkBuffer buffer) {
-   VkDescriptorBufferInfo bufferInfo = {};
-   bufferInfo.buffer = buffer;
-   bufferInfo.offset = 0;
-   bufferInfo.range = sizeof(UniformBufferObject);
-   return bufferInfo;
 }
 
 void record_command_buffer(App* app, VkCommandBuffer commandBuffer, u32 imageIndex) {
@@ -232,7 +252,7 @@ void update_uniform_buffer(App* app) {
 
    UniformBufferObject ubo = {};
    glm_rotate_make(ubo.model, glm_rad((float)now * 100.0f), (vec3){0.0f, 0.0f, 1.0f});
-   glm_lookat((vec3){2.0f, 2.0f, 2.0f}, (vec3){0.0f, 0.0f, 0.0f}, (vec3){0.0f, 0.0f, 1.0f}, ubo.view);
+   glm_lookat((vec3){2.0f, 2.0f, 2.0f}, camPos, (vec3){0.0f, 0.0f, 1.0f}, ubo.view);
    glm_perspective(glm_rad(45.0f), (float)app->swapchain.extent.width / (float)app->swapchain.extent.height, 0.1f, 10.0f, ubo.proj);
 
    // flip upside down
@@ -326,12 +346,16 @@ void init_vulkan(App* app) {
 
    app->commandPool = command_pool_create(app->devices, app->window);
 
+   app->textureImage = texture_image_create("resources/textures/statue.jpg", app->devices, app->queues, app->commandPool, &app->textureImageMemory);
+   app->imageView = texture_image_view_create(app->devices, app->textureImage);
+   app->imageSampler = texture_sampler_create(app->devices);
+
    app->vertexBuffer = buffer_create_vertex(app->devices, app->queues, app->commandPool, sizeof(vertices), vertices, &app->vertexBufferMemory);
    app->indexBuffer = buffer_create_index(app->devices, app->queues, app->commandPool, sizeof(indices), indices, &app->indexBufferMemory);
    app->uniforms = buffer_create_uniform(app->devices, app->queues, app->commandPool, sizeof(UniformBufferObject), &global_allocator);
 
    app->descriptorPool = descriptor_pool_create(app->devices);
-   app->descriptorSets = descriptor_set_create(app->uniforms.buffers, app->descriptorPool, app->devices, app->pipeline, &global_allocator);
+   app->descriptorSets = descriptor_sets_create(app->imageView, app->imageSampler, app->uniforms.buffers, app->descriptorPool, app->devices, app->pipeline, &global_allocator);
    app->commandBuffers = command_buffers_create(app->devices, app->commandPool, &global_allocator);
    create_sync_objects(app);
 }
@@ -361,6 +385,12 @@ void cleanup(App* app) {
    vkFreeMemory(app->devices.logical, app->vertexBufferMemory, nullptr);
    vkDestroyBuffer(app->devices.logical, app->indexBuffer, nullptr);
    vkFreeMemory(app->devices.logical, app->indexBufferMemory, nullptr);
+
+   vkDestroyImage(app->devices.logical, app->textureImage, nullptr);
+   vkFreeMemory(app->devices.logical, app->textureImageMemory, nullptr);
+
+   vkDestroyImageView(app->devices.logical, app->imageView, nullptr);
+   vkDestroySampler(app->devices.logical, app->imageSampler, nullptr);
 
    for (Size i = 0; i < vector_length(app->renderFinishedSemaphores); i++) {
       vkDestroySemaphore(app->devices.logical, app->renderFinishedSemaphores[i], nullptr);

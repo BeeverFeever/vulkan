@@ -13,7 +13,7 @@ VkCommandPool command_pool_create(Device device, Window window) {
    VkCommandPool pool = {};
    QueueFamilyIndices queueFamilyIndices = find_queue_families(device.physical, window.surface);
 
-   VkCommandPoolCreateInfo poolInfo = {0};
+   VkCommandPoolCreateInfo poolInfo = {};
    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
@@ -42,4 +42,37 @@ vectorT(VkCommandBuffer) command_buffers_create(Device device, VkCommandPool com
    }
 
    return buffers;
+}
+
+VkCommandBuffer command_begin_single_time_commands(VkCommandPool commandPool, Device device) {
+   VkCommandBufferAllocateInfo allocInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, 
+      .commandPool = commandPool, 
+      .commandBufferCount = 1
+   };
+   VkCommandBuffer commandBuffer;
+   if (vkAllocateCommandBuffers(device.logical, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+      fprintf(stderr, "failed to allocate single time command buffer.\n");
+      exit(EXIT_FAILURE);
+   }
+
+   VkCommandBufferBeginInfo beginInfo = {};
+   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+   vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+   return commandBuffer;
+}
+
+void command_end_single_time_commands(VkQueue queue, VkCommandBuffer* commandBuffer) {
+   vkEndCommandBuffer(*commandBuffer);
+   VkSubmitInfo submitInfo = {};
+   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   submitInfo.commandBufferCount = 1;
+   submitInfo.pCommandBuffers = commandBuffer;
+
+   vkQueueSubmit(queue, 1, &submitInfo, nullptr);
+   vkQueueWaitIdle(queue);
 }

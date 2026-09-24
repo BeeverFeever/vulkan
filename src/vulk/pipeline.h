@@ -18,4 +18,3 @@ extern vectorT(VkVertexInputAttributeDescription) get_vertex_attribute_descripti
 
 GraphicsPipeline graphics_pipeline_create(Device device, Swapchain swapchain, Allocator* allocator);
 VkRenderPass pipeline_create_render_pass(Swapchain swapchain, VkDevice device);
-VkDescriptorSetLayout pipeline_create_descriptor_set_layout(VkDevice device);

@@ -1,9 +1,11 @@
 #include "swapchain.h"
-#include "vulkan/vulkan_core.h"
 
 #include <stdlib.h>
 
+#include <vulk/window.h>
 #include <vulkan/vulkan.h>
+
+#include <vulk/image.h>
 
 static VkSurfaceFormatKHR _choose_surface_format(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
    u32 formatCount;
@@ -122,27 +124,8 @@ void swapchain_create_image_views(Swapchain* swapchain, Device device, Allocator
    swapchain->imageViews = vector(VkImage, vector_length(swapchain->images), allocator);
 
    for (Size i = 0; i < vector_length(swapchain->images); i++) {
-      VkImageViewCreateInfo createInfo = {};
-      createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-      createInfo.image = swapchain->images[i];
-      createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-      createInfo.format = swapchain->imageFormat;
-      createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      createInfo.subresourceRange.baseMipLevel = 0;
-      createInfo.subresourceRange.levelCount = 1;
-      createInfo.subresourceRange.baseArrayLayer = 0;
-      createInfo.subresourceRange.layerCount = 1;
-
-      if (vkCreateImageView(device.logical, &createInfo, nullptr, &swapchain->imageViews[i]) != VK_SUCCESS) {
-         fprintf(stderr, "failed to create image views\n");
-         exit(EXIT_FAILURE);
-      }
+      vector_push_back(swapchain->imageViews, image_view_create(device, swapchain->images[i], swapchain->imageFormat));
    }
-   vector_update_length(vector_length(swapchain->images), swapchain->imageViews);
 }
 
 void swapchain_create_framebuffers(Swapchain* swapchain, Device device, VkRenderPass renderPass, Allocator* allocator) {

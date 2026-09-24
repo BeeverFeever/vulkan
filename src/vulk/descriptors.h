@@ -5,10 +5,6 @@
 
 #include <utils.h>
 
-extern VkDescriptorBufferInfo ubo_get_descriptor_info(VkBuffer buffer);
-
 VkDescriptorPool descriptor_pool_create(Device device);
-vectorT(VkDescriptorSet)
-    descriptor_set_create(vectorT(VkBuffer) uniformBuffers,
-                          VkDescriptorPool pool, Device device,
-                          GraphicsPipeline pipeline, Allocator *allocator);
+vectorT(VkDescriptorSet) descriptor_sets_create(VkImageView textureImageView, VkSampler textureSampler, vectorT(VkBuffer) uniformBuffers, VkDescriptorPool pool, Device device, GraphicsPipeline pipeline, Allocator *allocator); 
+VkDescriptorSetLayout descriptor_set_layouts_create(VkDevice device, Allocator* allocator);

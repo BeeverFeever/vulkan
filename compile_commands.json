@@ -19,6 +19,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -43,6 +45,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -67,6 +71,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -91,6 +97,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -115,6 +123,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -139,6 +149,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -163,6 +175,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -187,6 +201,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -211,6 +227,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -235,6 +253,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -259,6 +279,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -283,6 +305,34 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
+      "-pedantic"
+    ],
+    "directory": "/home/beever/dev/vulkan"
+  },
+  {
+    "file": "./src/vulk/image.c",
+    "arguments": [
+      "cc",
+      "-include",
+      "defines.h",
+      "./src/vulk/image.c",
+      "-std=c23",
+      "-g3",
+      "-Wall",
+      "-Wextra",
+      "-Wconversion",
+      "-Wdouble-promotion",
+      "-Wno-unused-parameter",
+      "-Wno-unused-function",
+      "-Wno-sign-conversion",
+      "-fsanitize=undefined",
+      "-finstrument-functions",
+      "-Isrc",
+      "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -307,6 +357,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"
@@ -331,6 +383,8 @@
       "-finstrument-functions",
       "-Isrc",
       "-I/home/beever/dev/vulkan/vulkan-1.4.321.1/x86_64/include",
+      "-isystem",
+      "extern",
       "-pedantic"
     ],
     "directory": "/home/beever/dev/vulkan"

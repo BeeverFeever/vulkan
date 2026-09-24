@@ -78,6 +78,7 @@ VkDevice device_logical_create(Queues* queues, VkSurfaceKHR surface, VkPhysicalD
    }
 
    VkPhysicalDeviceFeatures deviceFeatures = {0};
+   deviceFeatures.samplerAnisotropy = true;
 
    VkDeviceCreateInfo createInfo = {0};
    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

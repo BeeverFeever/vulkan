@@ -6,7 +6,7 @@ source ./vulkan-1.4.321.1/setup-env.sh
 cfiles=$(find ./src -type f -name "*.c")
 
 COMPILER_FLAGS="-std=c23 -g3 -Wall -Wextra -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -finstrument-functions"
-INCLUDE_FLAGS="-Isrc -I$VULKAN_SDK/include"
+INCLUDE_FLAGS="-Isrc -I$VULKAN_SDK/include -isystem extern"
 LINKER_FLAGS="-lm -lcglm -lglfw -lvulkan -lxcb -lX11 -lX11-xcb -lxkbcommon -pedantic -L$VULKAN_SDK/lib"
 
 command -v bear >/dev/null && BEAR="bear --" || BEAR=

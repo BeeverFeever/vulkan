@@ -1,8 +1,11 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <vulk/commands.h>
 #include <vulkan/vulkan.h>
+#include <stb_image.h>
 
 #include <vulk/buffer.h>
 #include <vulk/device.h>
@@ -11,7 +14,7 @@
 
 #include <utils.h>
 
-static u32 find_memory_type(Device device, u32 typeFilter, VkMemoryPropertyFlags properties) {
+u32 find_memory_type(Device device, u32 typeFilter, VkMemoryPropertyFlags properties) {
    VkPhysicalDeviceMemoryProperties memProperties;
    vkGetPhysicalDeviceMemoryProperties(device.physical, &memProperties);
 
@@ -55,38 +58,43 @@ VkBuffer buffer_create(Device device, VkDeviceSize size, VkBufferUsageFlags usag
    return buffer;
 }
 
+//void buffer_copy(VkCommandPool commandPool, Device device, Queues queues, VkBuffer src, VkBuffer dest, VkDeviceSize size) {
 void buffer_copy(VkCommandPool commandPool, Device device, Queues queues, VkBuffer src, VkBuffer dest, VkDeviceSize size) {
-   VkCommandBufferAllocateInfo allocInfo = {};
-   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-   allocInfo.commandPool = commandPool;
-   allocInfo.commandBufferCount = 1;
+   VkCommandBuffer commandBuffer = command_begin_single_time_commands(commandPool, device);
+   vkCmdCopyBuffer(commandBuffer, src, dest, 1, &(VkBufferCopy){.size = size});
+   command_end_single_time_commands(queues.graphics, &commandBuffer);
 
-   VkCommandBuffer commandBuffer;
-   vkAllocateCommandBuffers(device.logical, &allocInfo, &commandBuffer);
-
-   VkCommandBufferBeginInfo beginInfo = {};
-   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-   vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-   VkBufferCopy copyRegion = {};
-   copyRegion.srcOffset = 0; // Optional
-   copyRegion.dstOffset = 0; // Optional
-   copyRegion.size = size;
-   vkCmdCopyBuffer(commandBuffer, src, dest, 1, &copyRegion);
-   vkEndCommandBuffer(commandBuffer);
-
-   VkSubmitInfo submitInfo = {};
-   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-   submitInfo.commandBufferCount = 1;
-   submitInfo.pCommandBuffers = &commandBuffer;
-
-   vkQueueSubmit(queues.graphics, 1, &submitInfo, VK_NULL_HANDLE);
-   vkQueueWaitIdle(queues.graphics);
-
-   vkFreeCommandBuffers(device.logical, commandPool, 1, &commandBuffer);
+   // VkCommandBufferAllocateInfo allocInfo = {};
+   // allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+   // allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+   // allocInfo.commandPool = commandPool;
+   // allocInfo.commandBufferCount = 1;
+   //
+   // VkCommandBuffer commandBuffer;
+   // vkAllocateCommandBuffers(device.logical, &allocInfo, &commandBuffer);
+   //
+   // VkCommandBufferBeginInfo beginInfo = {};
+   // beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   // beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+   //
+   // vkBeginCommandBuffer(commandBuffer, &beginInfo);
+   //
+   // VkBufferCopy copyRegion = {};
+   // copyRegion.srcOffset = 0; // Optional
+   // copyRegion.dstOffset = 0; // Optional
+   // copyRegion.size = size;
+   // vkCmdCopyBuffer(commandBuffer, src, dest, 1, &copyRegion);
+   // vkEndCommandBuffer(commandBuffer);
+   //
+   // VkSubmitInfo submitInfo = {};
+   // submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   // submitInfo.commandBufferCount = 1;
+   // submitInfo.pCommandBuffers = &commandBuffer;
+   //
+   // vkQueueSubmit(queues.graphics, 1, &submitInfo, VK_NULL_HANDLE);
+   // vkQueueWaitIdle(queues.graphics);
+   //
+   // vkFreeCommandBuffers(device.logical, commandPool, 1, &commandBuffer);
 }
 
 VkBuffer buffer_create_vertex(Device device, Queues queues, VkCommandPool commandPool, VkDeviceSize bufferSize, vectorT(void) vertices, VkDeviceMemory* vertexBufferMemory) {
@@ -145,3 +153,19 @@ UniformBufferContainer buffer_create_uniform(Device device, Queues queues, VkCom
    return outBuffer;
 }
 
+void buffer_copy_to_image(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, u32 width, u32 height) {
+   VkBufferImageCopy region = {
+      .bufferOffset = 0,
+      .bufferRowLength = 0,
+      .bufferImageHeight = 0,
+      .imageSubresource = {
+         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+         .mipLevel = 0, 
+         .baseArrayLayer = 0, 
+         .layerCount = 1 },
+      .imageOffset = {0, 0, 0},
+      .imageExtent = {width, height, 1}
+   };
+
+   vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+}

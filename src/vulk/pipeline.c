@@ -2,11 +2,13 @@
 
 #include <stdlib.h>
 
+#include <vulk/descriptors.h>
 #include <vulkan/vulkan.h>
 
 #include <vulk/device.h>
 #include <vulk/shaderModule.h>
 #include <vulk/config.h>
+#include <vulk/descriptors.h>
 
 #include <utils.h>
 
@@ -57,31 +59,9 @@ static VkRenderPass _create_render_pass(Swapchain swapchain, Device device) {
    return rPass;
 }
 
-static VkDescriptorSetLayout _create_descriptor_set_layout(Device device) {
-   VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-   uboLayoutBinding.binding = 0;
-   uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   uboLayoutBinding.descriptorCount = 1;
-   uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-   VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   layoutInfo.bindingCount = 1;
-   layoutInfo.pBindings = &uboLayoutBinding;
-
-   VkDescriptorSetLayout layout = {};
-
-   if (vkCreateDescriptorSetLayout(device.logical, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
-      fprintf(stderr, "failed to create descriptor set layout\n");
-      exit(EXIT_FAILURE);
-   }
-
-   return layout;
-}
-
 GraphicsPipeline graphics_pipeline_create(Device device, Swapchain swapchain, Allocator* allocator) {
    GraphicsPipeline gPipe = {};
-   gPipe.descriptorSetLayout = _create_descriptor_set_layout(device);
+   gPipe.descriptorSetLayout = descriptor_set_layouts_create(device.logical, allocator);
    gPipe.renderPass = _create_render_pass(swapchain, device);
 
    VkShaderModule vertShaderModule = shader_module_create(str("./resources/shaders/spv/basic.vert.spv"), device, allocator);
@@ -244,26 +224,3 @@ VkRenderPass pipeline_create_render_pass(Swapchain swapchain, VkDevice device) {
 
    return renderPass;
 }
-
-VkDescriptorSetLayout pipeline_create_descriptor_set_layout(VkDevice device) {
-   VkDescriptorSetLayout descriptorSetLayout = {};
-
-   VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-   uboLayoutBinding.binding = 0;
-   uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   uboLayoutBinding.descriptorCount = 1;
-   uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-   VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   layoutInfo.bindingCount = 1;
-   layoutInfo.pBindings = &uboLayoutBinding;
-
-   if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-      fprintf(stderr, "failed to create descriptor set layout\n");
-      exit(EXIT_FAILURE);
-   }
-
-   return descriptorSetLayout;
-}
-
